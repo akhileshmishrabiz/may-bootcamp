@@ -1,0 +1,1 @@
+0 * * * * /logrotate.sh >> /var/log/logrotate_cron.log 2>&1
