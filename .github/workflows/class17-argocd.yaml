@@ -2,16 +2,16 @@
 name: Build and Deploy to Kubernetes
 
 on:
-  # push:
-  #   branches: [ main, develop ]  # Trigger on main or develop branch
-  #   paths:
-  #     - 'src/**'  # Only trigger when source code changes
+  push:
+    branches: [ main ]  # Trigger on main branch
+    paths:
+      - 'class19/src/**'  # Only trigger when source code changes
   workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: student-portal
-  ECR_REGISTRY: 366140438193.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_REPOSITORY: may-flask
+  ECR_REGISTRY: 879381241087.dkr.ecr.ap-south-1.amazonaws.com
 
 jobs:
   build-and-deploy:
@@ -24,6 +24,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch full history for proper versioning
+        token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub token for authentication
 
     # Setup Docker Buildx
     - name: Set up Docker Buildx
@@ -64,8 +65,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./src
-        file: ./src/Dockerfile
+        context: ./class19/src  # Fixed: Added proper context path
+        file: ./class19/src/Dockerfile
         platforms: linux/amd64
         push: true
         tags: |
@@ -82,21 +83,26 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Clone the repository with the argo-dev branch
-        git fetch origin argo-dev:argo-dev || git checkout -b argo-dev
-        git checkout argo-dev
+        # Fetch and checkout the correct ArgoCD branch
+        git fetch origin argo-class19:argo-class19 || {
+          echo "Branch argo-class19 not found, creating it..."
+          git checkout -b argo-class19
+          git push origin argo-class19
+          git fetch origin argo-class19:argo-class19
+        }
+        git checkout argo-class19
         
         # Update the image tag in the deployment file
         IMAGE_TAG="${{ steps.image-tag.outputs.image_tag }}"
         FULL_IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
         
-        # Update exercise5 deployment file
-        sed -i "s|image: .*|image: ${FULL_IMAGE}|g" k8s/exercise5/app_deployment.yaml
+        # Update the deployment file (fixed the file path and sed command)
+        sed -i "s|image: .*|image: ${FULL_IMAGE}|g" class19/k8s/app.yaml
         
-        # Commit and push changes
-        git add k8s/exercise5/app_deployment.yaml
+        # Commit and push changes (fixed branch name)
+        git add class19/k8s/app.yaml
         git commit -m "Update image tag to ${IMAGE_TAG} from commit ${{ github.sha }}" || exit 0
-        git push origin argo-dev
+        git push origin argo-class19
 
     # Create deployment summary
     - name: Deployment Summary
@@ -109,10 +115,10 @@ jobs:
         echo "| **Full Image** | \`${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.image-tag.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
         echo "| **Branch** | \`${{ steps.image-tag.outputs.branch_name }}\` |" >> $GITHUB_STEP_SUMMARY
         echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **ArgoCD Branch** | \`argo-dev\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **ArgoCD Branch** | \`argo-class19\` |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "✅ Image built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
-        echo "✅ ArgoCD configuration updated on argo-dev branch!" >> $GITHUB_STEP_SUMMARY
+        echo "✅ ArgoCD configuration updated on argo-class19 branch!" >> $GITHUB_STEP_SUMMARY
 
     # Notify deployment status
     - name: Deployment notification
