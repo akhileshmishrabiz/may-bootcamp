@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> bed3354df2e11e0afbd60aa6bae34fac12e441c5
 # # argocd-app.yaml
 # apiVersion: argoproj.io/v1alpha1
 # kind: Application
@@ -20,6 +23,7 @@
 #       selfHeal: true
 #     syncOptions:
 #     - CreateNamespace=true
+<<<<<<< HEAD
 =======
 # argocd-app.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -43,3 +47,5 @@ spec:
     syncOptions:
     - CreateNamespace=true
 >>>>>>> ec7a36767eee40006824af62e93383945c715456
+=======
+>>>>>>> bed3354df2e11e0afbd60aa6bae34fac12e441c5
