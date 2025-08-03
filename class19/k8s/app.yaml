@@ -21,7 +21,7 @@ spec:
       - name: aws-secret
       containers:
       - name: attendance-app
-        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/may-flask:latest
+        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/may-flask:v20250803-21cdb467
         imagePullPolicy: Always
         resources:
           limits:
