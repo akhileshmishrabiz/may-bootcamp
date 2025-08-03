@@ -45,7 +45,7 @@ kubectl apply -f argocd-app.yaml
 kubectl get applications -n argocd
 
 
-kubectl create secret docker-registry aws-secret \
+kubectl create -n app secret docker-registry aws-secret \
   --docker-server=879381241087.dkr.ecr.ap-south-1.amazonaws.com \
   --docker-username=AWS \
   --docker-password="$(aws ecr get-login-password --region ap-south-1)" 
