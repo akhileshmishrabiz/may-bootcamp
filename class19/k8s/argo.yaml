@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # # argocd-app.yaml
 # apiVersion: argoproj.io/v1alpha1
 # kind: Application
@@ -19,3 +20,26 @@
 #       selfHeal: true
 #     syncOptions:
 #     - CreateNamespace=true
+=======
+# argocd-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: class19-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/akhileshmishrabiz/may-bootcamp.git
+    targetRevision: HEAD
+    path: class19/k8s  # Directory containing your K8s manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+>>>>>>> ec7a36767eee40006824af62e93383945c715456
