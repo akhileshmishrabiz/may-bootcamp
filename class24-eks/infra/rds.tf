@@ -40,7 +40,7 @@ resource "aws_security_group" "rds" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier            = "${var.prefix}-${var.environment}-db"
+  identifier            = "${var.prefix}-db"
   allocated_storage     = var.db_default_settings.allocated_storage
   max_allocated_storage = var.db_default_settings.max_allocated_storage
   engine                = "postgres"

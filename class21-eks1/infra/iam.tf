@@ -276,11 +276,3 @@ resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
   role       = aws_iam_role.aws_load_balancer_controller.name
 }
 
-# Helm provider
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
-  }
-}

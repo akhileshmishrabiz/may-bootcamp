@@ -1,12 +1,3 @@
-data "aws_eks_cluster" "cluster_oidc" {
-  name = module.eks.cluster_name
-}
-
-# Extract OIDC issuer URL
-data "tls_certificate" "cluster_oidc" {
-  url = data.aws_eks_cluster.cluster_oidc.identity[0].oidc[0].issuer
-}
-
 # Secret for Database Credentials (mounted as volume)
 resource "kubernetes_secret" "catalogue_db_secrets" {
   metadata {
@@ -62,5 +53,15 @@ resource "kubernetes_config_map" "catalogue_config" {
       db_host=${aws_db_instance.postgres.address}
     EOT
   }
+}
+
+
+data "aws_eks_cluster" "cluster_oidc" {
+  name = module.eks.cluster_name
+}
+
+# Extract OIDC issuer URL
+data "tls_certificate" "cluster_oidc" {
+  url = data.aws_eks_cluster.cluster_oidc.identity[0].oidc[0].issuer
 }
 
