@@ -1,5 +1,3 @@
-# lambda code to trogger the RDS instance migration ecs task
-
 import boto3
 from os import getenv
 import json
@@ -29,9 +27,8 @@ def log_setup():
 
 
 # rds_instance, size
-def run_ecs_task(rds_instance, allocated_storage):
+def run_ecs_task(rds_instance):
     ecs = boto3.client("ecs")
-
     cluster = getenv("ECS_CLUSTER")
     task_definition = getenv("ECS_TASK_DEF").split("/")[-1]
     launch_type = "FARGATE"
@@ -48,7 +45,7 @@ def run_ecs_task(rds_instance, allocated_storage):
         "containerOverrides": [
             {
                 "name": getenv("ECS_CONTAINER"),
-                "command": ["python3", "main.py", "migrate", rds_instance, allocated_storage],
+                "command": ["python3", "main.py", rds_instance],
             }
         ]
     }
@@ -67,23 +64,14 @@ def run_ecs_task(rds_instance, allocated_storage):
 def handler(event, context):
     log_setup()
 
+    # event = {"db_link":"postgres://{postgre_user}:{password}@{db_host}:{db_port}/{db_name}"}
     # data from trigger event
-    print(f" Event -> {event}")
-    db_instance = event["db_instance"]
-    allocated_storage = event["allocated_storage"]
-
-    print(f" RDS Instance : {db_instance} , Allocated Storage : {allocated_storage} ")
-# event example
-#    {
-#     "db_instance": "mayclass26",
-#     "allocated_storage": "20"    
-# }
-    logging.info(f' Triggering ECS task with RDS ')
+    db_link = event["db_link"]
+    logging.info(f' Triggering ECS task with RDS {db_link.split(":")[2].split("@")[-1]}')
     # Triger the ecs task
     try:
-        ecs_task = run_ecs_task(db_instance, allocated_storage)
+        ecs_task = run_ecs_task(db_link)
         logging.info(f"  ecs task triggered -> \n{ecs_task}")
     except Exception as e:
         logging.info(e)
     
-
