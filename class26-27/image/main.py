@@ -1,9 +1,9 @@
 import subprocess
 import boto3
 import logging
-import psycopg
+import psycopg2
 from botocore.config import Config
-from psycopg import OperationalError
+from psycopg2 import OperationalError
 import time
 import argparse
 from datetime import datetime, timedelta
@@ -202,7 +202,7 @@ def check_rds_availability(host, port, dbname, user, password):
     while True:
         try:
             # Attempt to establish a connection to the RDS database
-            conn = psycopg.connect(
+            conn = psycopg2.connect(
                 host=host, port=port, dbname=dbname, user=user, password=password
             )
             conn.close()
