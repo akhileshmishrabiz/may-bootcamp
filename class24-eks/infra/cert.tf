@@ -3,186 +3,134 @@ data "aws_route53_zone" "main" {
   name = var.domain_name
 }
 
-
-# Install cert-manager using Helm
-resource "helm_release" "cert_manager" {
-  name       = "cert-manager"
-  repository = "https://charts.jetstack.io"
-  chart      = "cert-manager"
-  namespace  = "cert-manager"
-  version    = "v1.14.4"
-  
-  create_namespace = true
-  
-  set {
-    name  = "installCRDs"
-    value = "true"
-  }
-  
-  set {
-    name  = "global.leaderElection.namespace"
-    value = "cert-manager"
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "true"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "certmanagersa"
-  }
-  
-  values = [
-    yamlencode({
-      serviceAccount = {
-        annotations = {
-          "eks.amazonaws.com/role-arn" = aws_iam_role.cert_manager.arn
-        }
-      }
-      securityContext = {
-        fsGroup = 1001
-      }
-      webhook = {
-        securePort = 10250
-      }
-    })
-  ]
-  
-  depends_on = [
-    aws_iam_role_policy_attachment.cert_manager
-  ]
-}
-
-# Wait for cert-manager to be ready
-resource "kubernetes_config_map" "cert_manager_ready" {
-  metadata {
-    name      = "cert-manager-ready"
-    namespace = "cert-manager"
-  }
-
-  data = {
-    ready = "true"
-  }
-
-  depends_on = [helm_release.cert_manager]
-}
-
-# Add a delay to ensure CRDs are available
-resource "time_sleep" "wait_for_cert_manager" {
-  depends_on = [helm_release.cert_manager]
-
+# Wait for AWS LB Controller to be ready
+resource "time_sleep" "wait_for_lb_controller" {
   create_duration = "30s"
 }
 
-# Create ClusterIssuer for Let's Encrypt (Production)
-resource "kubernetes_manifest" "cluster_issuer" {
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "ClusterIssuer"
-    metadata = {
-      name = "letsencrypt-prod"
-    }
-    spec = {
-      acme = {
-        server = "https://acme-v02.api.letsencrypt.org/directory"
-        email  = var.cert_email
-        privateKeySecretRef = {
-          name = "letsencrypt-prod"
-        }
-        solvers = [
-          {
-            http01 = {
-              ingress = {
-                class = "alb"
-              }
-            }
-          }
-        ]
-      }
+# ACM Certificate for Craftista Application
+resource "aws_acm_certificate" "craftista" {
+  domain_name       = "${var.subdomain}.${var.domain_name}"
+  validation_method = "DNS"
+
+  subject_alternative_names = [
+    "catalogue.${var.subdomain}.${var.domain_name}",
+    "voting.${var.subdomain}.${var.domain_name}",
+    "recommendations.${var.subdomain}.${var.domain_name}",
+    "*.${var.subdomain}.${var.domain_name}"
+  ]
+
+  tags = {
+    Name        = "craftista-certificate"
+    Environment = var.environment
+    Application = var.application_name
+    ManagedBy   = "Terraform"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route53 DNS validation records for ACM certificate
+resource "aws_route53_record" "craftista_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.craftista.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
     }
   }
 
-  depends_on = [
-    time_sleep.wait_for_cert_manager
-  ]
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main.zone_id
 }
 
-# Create a Certificate resource for the domains
-resource "kubernetes_manifest" "craftista_certificate" {
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "Certificate"
-    metadata = {
-      name      = "craftista-tls-cert"
-      namespace = var.namespace
-    }
-    spec = {
-      secretName = "craftista-tls-secret"
-      issuerRef = {
-        name = "letsencrypt-prod"
-        kind = "ClusterIssuer"
-      }
-      dnsNames = [
-        "${var.subdomain}.${var.domain_name}",
-        "catalogue.${var.subdomain}.${var.domain_name}",
-        "voting.${var.subdomain}.${var.domain_name}",
-        "recommendations.${var.subdomain}.${var.domain_name}"
-      ]
+# Certificate validation
+resource "aws_acm_certificate_validation" "craftista" {
+  certificate_arn         = aws_acm_certificate.craftista.arn
+  validation_record_fqdns = [for record in aws_route53_record.craftista_cert_validation : record.fqdn]
+}
+
+# ACM Certificate for ArgoCD
+resource "aws_acm_certificate" "argocd" {
+  domain_name       = "argocd.${var.subdomain}.${var.domain_name}"
+  validation_method = "DNS"
+
+  tags = {
+    Name        = "argocd-certificate"
+    Environment = var.environment
+    Application = "argocd"
+    ManagedBy   = "Terraform"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route53 DNS validation records for ArgoCD ACM certificate
+resource "aws_route53_record" "argocd_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.argocd.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
     }
   }
 
-  depends_on = [
-    kubernetes_manifest.cluster_issuer
-  ]
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main.zone_id
 }
 
+# Certificate validation for ArgoCD
+resource "aws_acm_certificate_validation" "argocd" {
+  certificate_arn         = aws_acm_certificate.argocd.arn
+  validation_record_fqdns = [for record in aws_route53_record.argocd_cert_validation : record.fqdn]
+}
+
+# Ingress managed by Terraform for easy ALB lookup and Route53 mapping
 resource "kubernetes_ingress_v1" "craftista_ingress" {
   metadata {
     name      = "craftista-ingress"
     namespace = var.namespace
-    
+
     annotations = {
       "kubernetes.io/ingress.class"                    = "alb"
       "alb.ingress.kubernetes.io/scheme"              = "internet-facing"
       "alb.ingress.kubernetes.io/target-type"         = "ip"
       "alb.ingress.kubernetes.io/listen-ports"        = "[{\"HTTP\": 80}, {\"HTTPS\": 443}]"
       "alb.ingress.kubernetes.io/ssl-redirect"        = "443"
+      "alb.ingress.kubernetes.io/certificate-arn"     = aws_acm_certificate.craftista.arn
       "alb.ingress.kubernetes.io/healthcheck-path"    = "/"
       "alb.ingress.kubernetes.io/healthcheck-interval-seconds" = "15"
       "alb.ingress.kubernetes.io/healthcheck-timeout-seconds"  = "5"
       "alb.ingress.kubernetes.io/healthy-threshold-count"      = "2"
       "alb.ingress.kubernetes.io/unhealthy-threshold-count"    = "2"
       "alb.ingress.kubernetes.io/tags"                = "Environment=${var.environment},Application=${var.application_name},ManagedBy=Terraform"
-      # cert-manager annotation for automatic certificate
-      "cert-manager.io/cluster-issuer"                = "letsencrypt-prod"
     }
   }
-  
+
   spec {
     ingress_class_name = "alb"
-    
-    # TLS configuration using cert-manager certificate
-    tls {
-      hosts = [
-        "${var.subdomain}.${var.domain_name}",
-        "catalogue.${var.subdomain}.${var.domain_name}",
-        "voting.${var.subdomain}.${var.domain_name}",
-        "recommendations.${var.subdomain}.${var.domain_name}"
-      ]
-      secret_name = "craftista-tls-secret"
-    }
-    # catalogue
+
     # Main frontend
     rule {
       host = "${var.subdomain}.${var.domain_name}"
-      
+
       http {
         path {
           path      = "/"
           path_type = "Prefix"
-          
+
           backend {
             service {
               name = "frontend"
@@ -194,16 +142,16 @@ resource "kubernetes_ingress_v1" "craftista_ingress" {
         }
       }
     }
-    
+
     # Catalogue service
     rule {
       host = "catalogue.${var.subdomain}.${var.domain_name}"
-      
+
       http {
         path {
           path      = "/"
           path_type = "Prefix"
-          
+
           backend {
             service {
               name = "catalogue"
@@ -215,16 +163,16 @@ resource "kubernetes_ingress_v1" "craftista_ingress" {
         }
       }
     }
-    
+
     # Voting service
     rule {
       host = "voting.${var.subdomain}.${var.domain_name}"
-      
+
       http {
         path {
           path      = "/"
           path_type = "Prefix"
-          
+
           backend {
             service {
               name = "voting"
@@ -236,16 +184,16 @@ resource "kubernetes_ingress_v1" "craftista_ingress" {
         }
       }
     }
-    
+
     # Recommendations service
     rule {
       host = "recommendations.${var.subdomain}.${var.domain_name}"
-      
+
       http {
         path {
           path      = "/"
           path_type = "Prefix"
-          
+
           backend {
             service {
               name = "recco"
@@ -259,44 +207,74 @@ resource "kubernetes_ingress_v1" "craftista_ingress" {
     }
   }
 
-  depends_on = [ 
-    kubernetes_manifest.cluster_issuer,
-    kubernetes_manifest.craftista_certificate
-    ]
+  depends_on = [
+    aws_acm_certificate_validation.craftista,
+    kubernetes_namespace.craftista,
+    time_sleep.wait_for_lb_controller
+  ]
 }
 
+# Wait for ALB to be created by the ingress controller (takes ~2-3 minutes)
+resource "time_sleep" "wait_for_alb" {
+  depends_on = [kubernetes_ingress_v1.craftista_ingress]
 
-# # Data source to get the ALB created by the ingress
-# data "aws_lb" "craftista_alb" {
-#   tags = {
-#     "ingress.k8s.aws/stack" = "${var.namespace}/craftista-ingress"
-#   }
+  create_duration = "180s"  # Wait 3 minutes for ALB creation
+}
 
-#   depends_on = [kubernetes_ingress_v1.craftista_ingress]
-# }
+# Null resource to check if ALB exists before proceeding
+resource "null_resource" "check_alb" {
+  depends_on = [time_sleep.wait_for_alb]
 
-# # Create wildcard Route53 record for all subdomains
-# resource "aws_route53_record" "wildcard" {
-#   zone_id = data.aws_route53_zone.main.zone_id
-#   name    = "*.${var.subdomain}.${var.domain_name}"
-#   type    = "A"
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Checking if ALB is created via kubectl..."
+      for i in {1..10}; do
+        ALB_HOST=$(kubectl get ingress craftista-ingress -n ${var.namespace} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
 
-#   alias {
-#     name                   = data.aws_lb.craftista_alb.dns_name
-#     zone_id                = data.aws_lb.craftista_alb.zone_id
-#     evaluate_target_health = false
-#   }
-# }
+        if [ ! -z "$ALB_HOST" ]; then
+          echo "ALB found: $ALB_HOST"
+          exit 0
+        fi
 
-# # Create base subdomain record
-# resource "aws_route53_record" "main" {
-#   zone_id = data.aws_route53_zone.main.zone_id
-#   name    = "${var.subdomain}.${var.domain_name}"
-#   type    = "A"
+        echo "Waiting for ALB... attempt $i/10"
+        sleep 30
+      done
+      echo "ALB not found after 10 attempts, but proceeding..."
+    EOT
+  }
+}
 
-#   alias {
-#     name                   = data.aws_lb.craftista_alb.dns_name
-#     zone_id                = data.aws_lb.craftista_alb.zone_id
-#     evaluate_target_health = false
-#   }
-# }
+# Data source to get the ALB created by the ingress
+data "aws_lb" "craftista_alb" {
+  tags = {
+    "ingress.k8s.aws/stack" = "${var.namespace}/craftista-ingress"
+  }
+
+  depends_on = [null_resource.check_alb]
+}
+
+# Create wildcard Route53 record for all subdomains
+resource "aws_route53_record" "wildcard" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "*.${var.subdomain}.${var.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = data.aws_lb.craftista_alb.dns_name
+    zone_id                = data.aws_lb.craftista_alb.zone_id
+    evaluate_target_health = false
+  }
+}
+
+# Create base subdomain record
+resource "aws_route53_record" "main" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "${var.subdomain}.${var.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = data.aws_lb.craftista_alb.dns_name
+    zone_id                = data.aws_lb.craftista_alb.zone_id
+    evaluate_target_health = false
+  }
+}

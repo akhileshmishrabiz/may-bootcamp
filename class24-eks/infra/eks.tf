@@ -7,13 +7,13 @@ module "eks" {
   name    = "${var.prefix}-${var.environment}-cluster"
   kubernetes_version = "1.31"  # Latest stable version with good support
 
-  addons = {
+    addons = {
     coredns                = {}
     kube-proxy             = {}
     vpc-cni                = {
       before_compute = true
     }
-    "aws-ebs-csi-driver"  = {}
+    # "aws-ebs-csi-driver"  = {}
   }
 
   # Optional

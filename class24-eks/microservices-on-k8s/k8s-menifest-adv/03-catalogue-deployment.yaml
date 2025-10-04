@@ -19,22 +19,36 @@ spec:
     spec:
       containers:
       - name: catalogue
-        image: 339713040609.dkr.ecr.ap-south-1.amazonaws.com/catalogue:latest
+        image: livingdevopswithakhilesh/microservices:catalogue-644625f8de627843afd6fc916bc30459705c2726
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
           name: http
         env:
-        - name: DB_HOST
-          value: "craftista-db.cdglnjeympmt.ap-south-1.rds.amazonaws.com"
         - name: DB_USER
-          value: "root"
+          valueFrom:
+            secretKeyRef:
+              name: catalogue-db-secrets
+              key: db_user
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: db-secret
-              key: password
-        - name: DB_NAME
-          value: "catalogue"
+              name: catalogue-db-secrets
+              key: db_password
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: catalogue-config
+              key: app_version
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config.json
+          subPath: config.json
+        - name: db-config-volume
+          mountPath: /app/db-config
+        - name: db-secrets-volume
+          mountPath: /app/secrets
+          readOnly: true
         resources:
           requests:
             cpu: 100m
@@ -44,7 +58,7 @@ spec:
             memory: 512Mi
         livenessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 5000
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -52,12 +66,28 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /ready
+            path: /
             port: 5000
-          initialDelaySeconds: 10
+          initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+      volumes:
+      - name: config-volume
+        configMap:
+          name: catalogue-config
+          items:
+          - key: config.json
+            path: config.json
+      - name: db-config-volume
+        configMap:
+          name: catalogue-config
+          items:
+          - key: db-config.properties
+            path: db-config.properties
+      - name: db-secrets-volume
+        secret:
+          secretName: catalogue-db-secrets
 ---
 apiVersion: v1
 kind: Service

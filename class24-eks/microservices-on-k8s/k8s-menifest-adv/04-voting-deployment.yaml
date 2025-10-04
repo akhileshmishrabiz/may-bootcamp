@@ -1,3 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voting-config
+  namespace: craftista
+data:
+  application.properties: |
+    # Catalogue Service Endpoint
+    catalogue.service-url=http://catalogue:5000/api/products
+
+    # H2
+    spring.h2.console.enabled=true
+    spring.h2.console.path=/h2-console
+
+    # Datasource
+    spring.datasource.url=jdbc:h2:mem:testdb
+    spring.datasource.driver-class-name=org.h2.Driver
+    spring.datasource.username=sa
+    spring.datasource.password=password
+
+    # JPA
+    spring.jpa.show-sql=true
+    spring.jpa.hibernate.ddl-auto=update
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,47 +44,42 @@ spec:
     spec:
       containers:
       - name: voting
-        image: 339713040609.dkr.ecr.ap-south-1.amazonaws.com/voting:latest
+        image: livingdevopswithakhilesh/microservices:voting-644625f8de627843afd6fc916bc30459705c2726
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
-        env:
-        - name: DB_HOST
-          value: "craftista-db.cdglnjeympmt.ap-south-1.rds.amazonaws.com"
-        - name: DB_USER
-          value: "root"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: password
-        - name: DB_NAME
-          value: "voting"
-        - name: SPRING_PROFILES_ACTIVE
-          value: "production"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/application.properties
+          subPath: application.properties
         resources:
           requests:
             cpu: 200m
             memory: 256Mi
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 1200m
+            memory: 2Gi
         livenessProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/origamis
             port: 8080
           initialDelaySeconds: 60
-          periodSeconds: 10
+          periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/origamis
             port: 8080
           initialDelaySeconds: 30
-          periodSeconds: 5
+          periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
+      volumes:
+      - name: config-volume
+        configMap:
+          name: voting-config
 ---
 apiVersion: v1
 kind: Service

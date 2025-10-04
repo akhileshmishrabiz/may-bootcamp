@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: 339713040609.dkr.ecr.ap-south-1.amazonaws.com/frontend:latest
+        image: livingdevopswithakhilesh/microservices:frontend-644625f8de627843afd6fc916bc30459705c2726
         ports:
         - containerPort: 3000
           name: http
