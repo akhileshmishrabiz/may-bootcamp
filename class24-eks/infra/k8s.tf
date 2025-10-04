@@ -1,9 +1,22 @@
+# Create namespace for Craftista application
+resource "kubernetes_namespace" "craftista" {
+  metadata {
+    name = var.craft_namespace
+
+    labels = {
+      name        = var.craft_namespace
+      managed-by  = "terraform"
+      environment = var.environment
+    }
+  }
+}
+
 # Secret for Database Credentials (mounted as volume)
 resource "kubernetes_secret" "catalogue_db_secrets" {
   metadata {
     name      = "catalogue-db-secrets"
     namespace = var.craft_namespace
-    
+
     labels = {
       app         = "catalogue-service"
       managed-by  = "terraform"
@@ -18,6 +31,8 @@ resource "kubernetes_secret" "catalogue_db_secrets" {
     db_user     = aws_db_instance.postgres.username  # Creates file: /app/secrets/db_user
     db_password = random_password.dbs_random_string.result   # Creates file: /app/secrets/db_password
   }
+
+  depends_on = [kubernetes_namespace.craftista]
 }
 
 # ConfigMap for Application Configuration (mounted as volume)
@@ -25,7 +40,7 @@ resource "kubernetes_config_map" "catalogue_config" {
   metadata {
     name      = "catalogue-config"
     namespace = var.craft_namespace
-    
+
     labels = {
       app         = "catalogue-service"
       managed-by  = "terraform"
@@ -36,7 +51,7 @@ resource "kubernetes_config_map" "catalogue_config" {
   data = {
     # App version as top-level key for environment variable
     app_version = "1.0.0"
-    
+
     # This will be mounted as /app/config.json
     "config.json" = jsonencode({
       app_version = "1.0.0"
@@ -46,13 +61,15 @@ resource "kubernetes_config_map" "catalogue_config" {
       db_user     = aws_db_instance.postgres.username
       db_password = "placeholder"  # Will be overridden by secret volume
     })
-    
+
     # This will be mounted as /app/db-config/db-config.properties
     "db-config.properties" = <<-EOT
       db_name=${aws_db_instance.postgres.db_name}
       db_host=${aws_db_instance.postgres.address}
     EOT
   }
+
+  depends_on = [kubernetes_namespace.craftista]
 }
 
 

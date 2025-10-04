@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: recco
-        image: 339713040609.dkr.ecr.ap-south-1.amazonaws.com/recco:latest
+        image: livingdevopswithakhilesh/microservices:recommendation-644625f8de627843afd6fc916bc30459705c2726
         ports:
         - containerPort: 8080
           name: http
@@ -35,7 +35,7 @@ spec:
             memory: 256Mi
         livenessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -43,7 +43,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5
