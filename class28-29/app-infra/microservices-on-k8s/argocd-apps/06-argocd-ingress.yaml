@@ -1,0 +1,88 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-ingress
+  namespace: argocd
+  annotations:
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: "/"
+    alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-south-1:339713040609:certificate/YOUR-CERT-ID"  # Update with your certificate
+    # ArgoCD specific annotations
+    alb.ingress.kubernetes.io/group.name: "argocd"
+    alb.ingress.kubernetes.io/tags: "Environment=production,Application=argocd,ManagedBy=Terraform"
+    # cert-manager annotation (if using cert-manager instead of ACM)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: alb
+  
+  # TLS configuration
+  tls:
+    - hosts:
+        - argocd.ms.akhileshmishra.tech
+      secretName: argocd-tls-secret  # Only needed if using cert-manager
+  
+  rules:
+    - host: argocd.ms.akhileshmishra.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 443
+
+---
+# ArgoCD Server configuration to work behind ALB
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enable insecure mode when behind ALB/proxy
+  server.insecure: "true"
+  # Disable internal TLS since ALB handles it
+  server.disable.internal.tls: "true"
+  
+---
+# ArgoCD Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-server-config
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server-config
+    app.kubernetes.io/part-of: argocd
+data:
+  # URL configuration for proper redirects
+  url: "https://argocd.ms.akhileshmishra.tech"
+  
+  # OIDC configuration (optional)
+  # oidc.config: |
+  #   name: OIDC
+  #   issuer: https://your-oidc-provider.com
+  #   clientId: argocd
+  #   clientSecret: $oidc.clientSecret
+  #   requestedScopes: ["openid", "profile", "email", "groups"]
+  #   requestedIDTokenClaims: {"groups": {"essential": true}}
+  
+  # Repository credentials template
+  repository.credentials: |
+    - url: https://github.com/akhileshmishrabiz
+      passwordSecret:
+        name: github-secret
+        key: password
+      usernameSecret:
+        name: github-secret  
+        key: username

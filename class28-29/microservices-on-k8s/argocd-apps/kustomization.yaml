@@ -1,0 +1,73 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Metadata
+metadata:
+  name: argocd-apps
+  annotations:
+    description: "ArgoCD applications and configurations for Craftista"
+
+# Namespace for ArgoCD resources
+namespace: argocd
+
+# Resources - order matters for proper deployment
+resources:
+  # Namespace first
+  - 01-argocd-namespace.yaml
+  
+  # RBAC and configurations
+  - 07-rbac-config.yaml
+  
+  # ArgoCD project
+  - 03-craftista-project.yaml
+  
+  # Applications
+  - 04-craftista-application.yaml
+  
+  # Ingress for ArgoCD UI
+  - 06-argocd-ingress.yaml
+  
+  # App of Apps (optional - deploy this separately)
+  # - 05-app-of-apps.yaml
+
+# Common labels for all ArgoCD resources
+commonLabels:
+  app.kubernetes.io/name: argocd
+  app.kubernetes.io/instance: production
+  app.kubernetes.io/component: gitops
+  app.kubernetes.io/part-of: argocd
+  app.kubernetes.io/managed-by: kustomize
+
+# Common annotations
+commonAnnotations:
+  managed-by: "kustomize"
+  contact: "admin@akhileshmishra.tech"
+  documentation: "https://github.com/akhileshmishrabiz/may-bootcamp"
+
+# Patches for environment-specific customizations
+patches:
+  # Update GitHub repository URL if needed
+  - target:
+      kind: Application
+      name: craftista-microservices
+    patch: |-
+      - op: replace
+        path: /spec/source/repoURL
+        value: "https://github.com/akhileshmishrabiz/may-bootcamp.git"
+  
+  # Update certificate ARN for ArgoCD ingress
+  - target:
+      kind: Ingress
+      name: argocd-server-ingress
+    patch: |-
+      - op: replace
+        path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+        value: "arn:aws:acm:ap-south-1:339713040609:certificate/YOUR-CERT-ID"
+
+# ConfigMap generator for ArgoCD configuration
+configMapGenerator:
+  - name: argocd-environment-config
+    literals:
+      - ENVIRONMENT=production
+      - DOMAIN=ms.akhileshmishra.tech
+      - REPOSITORY_URL=https://github.com/akhileshmishrabiz/may-bootcamp.git

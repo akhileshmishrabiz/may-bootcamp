@@ -1,0 +1,88 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: craftista-ingress-tls
+  namespace: craftista
+  annotations:
+    # AWS Load Balancer Controller annotations
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    
+    # cert-manager annotation for automatic certificate
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Listen on both HTTP and HTTPS
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    
+    # Health check configuration
+    alb.ingress.kubernetes.io/healthcheck-path: "/"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    
+    # Group all ingresses under one ALB
+    alb.ingress.kubernetes.io/group.name: "craftista-production"
+    
+    # Tags for the ALB
+    alb.ingress.kubernetes.io/tags: "Environment=production,Application=craftista,ManagedBy=Terraform"
+    
+spec:
+  ingressClassName: alb
+  tls:
+  - hosts:
+    - ms.akhileshmishra.tech
+    - catalogue.ms.akhileshmishra.tech
+    - voting.ms.akhileshmishra.tech
+    - recommendations.ms.akhileshmishra.tech
+    secretName: craftista-tls-secret
+  rules:
+  # Main frontend website
+  - host: ms.akhileshmishra.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+              
+  # Catalogue service API
+  - host: catalogue.ms.akhileshmishra.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: catalogue
+            port:
+              number: 5000
+              
+  # Voting service API
+  - host: voting.ms.akhileshmishra.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: voting
+            port:
+              number: 8080
+              
+  # Recommendation service API
+  - host: recommendations.ms.akhileshmishra.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: recco
+            port:
+              number: 8080
