@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: voting
-        image: livingdevopswithakhilesh/microservices:voting-644625f8de627843afd6fc916bc30459705c2726
+        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-voting:v20251005-8c09f6ca
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
