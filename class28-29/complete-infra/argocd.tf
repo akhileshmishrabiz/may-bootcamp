@@ -359,120 +359,120 @@ resource "time_sleep" "wait_for_argocd" {
 # Projects provide logical grouping and access control for applications
 # Using kubectl_manifest for better CRD handling
 # ============================================================================
-# resource "kubectl_manifest" "craftista_project" {
-#   yaml_body = <<-YAML
-#     apiVersion: argoproj.io/v1alpha1
-#     kind: AppProject
-#     metadata:
-#       name: craftista
-#       namespace: ${kubernetes_namespace.argocd.metadata[0].name}
-#       finalizers:
-#         - resources-finalizer.argocd.argoproj.io
-#     spec:
-#       description: Craftista Microservices Project
+resource "kubectl_manifest" "craftista_project" {
+  yaml_body = <<-YAML
+    apiVersion: argoproj.io/v1alpha1
+    kind: AppProject
+    metadata:
+      name: craftista
+      namespace: ${kubernetes_namespace.argocd.metadata[0].name}
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      description: Craftista Microservices Project
 
-#       # Source Repositories - Which Git repositories can this project deploy from?
-#       sourceRepos:
-#         - https://github.com/akhileshmishrabiz/may-bootcamp.git
-#         - '*'  # Allow all repos for flexibility (remove in production for security)
+      # Source Repositories - Which Git repositories can this project deploy from?
+      sourceRepos:
+        - https://github.com/akhileshmishrabiz/may-bootcamp.git
+        - '*'  # Allow all repos for flexibility (remove in production for security)
 
-#       # Destination Clusters and Namespaces - Where can this project deploy?
-#       destinations:
-#         - server: https://kubernetes.default.svc
-#           namespace: ${var.namespace}
-#         - server: https://kubernetes.default.svc
-#           namespace: craftista
+      # Destination Clusters and Namespaces - Where can this project deploy?
+      destinations:
+        - server: https://kubernetes.default.svc
+          namespace: ${var.namespace}
+        - server: https://kubernetes.default.svc
+          namespace: craftista
 
-#       # Cluster Resource Whitelist - Which cluster-scoped resources allowed?
-#       clusterResourceWhitelist:
-#         - group: ''
-#           kind: Namespace
-#         - group: rbac.authorization.k8s.io
-#           kind: '*'
+      # Cluster Resource Whitelist - Which cluster-scoped resources allowed?
+      clusterResourceWhitelist:
+        - group: ''
+          kind: Namespace
+        - group: rbac.authorization.k8s.io
+          kind: '*'
 
-#       # Namespace Resource Whitelist - Allow all resources within namespace
-#       namespaceResourceWhitelist:
-#         - group: '*'
-#           kind: '*'
+      # Namespace Resource Whitelist - Allow all resources within namespace
+      namespaceResourceWhitelist:
+        - group: '*'
+          kind: '*'
 
-#       # Orphaned Resources - Warn about resources deleted from Git
-#       orphanedResources:
-#         warn: true
-#   YAML
+      # Orphaned Resources - Warn about resources deleted from Git
+      orphanedResources:
+        warn: true
+  YAML
 
-#   depends_on = [
-#     null_resource.verify_argocd_crds
-#   ]
-# }
+  # depends_on = [
+  #   null_resource.verify_argocd_crds
+  # ]
+}
 
 # # ============================================================================
 # # ArgoCD Application for Craftista Microservices
 # # This is the main application definition that tells ArgoCD what to deploy
 # # Using kubectl_manifest for better CRD handling
 # # ============================================================================
-# resource "kubectl_manifest" "craftista_application" {
-#   yaml_body = <<-YAML
-#     apiVersion: argoproj.io/v1alpha1
-#     kind: Application
-#     metadata:
-#       name: craftista-microservices
-#       namespace: ${kubernetes_namespace.argocd.metadata[0].name}
-#       finalizers:
-#         - resources-finalizer.argocd.argoproj.io
-#       labels:
-#         app.kubernetes.io/name: craftista
-#         app.kubernetes.io/instance: ${var.environment}
-#     spec:
-#       # Associate with the Craftista project
-#       project: craftista
+resource "kubectl_manifest" "craftista_application" {
+  yaml_body = <<-YAML
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: craftista-microservices
+      namespace: ${kubernetes_namespace.argocd.metadata[0].name}
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+      labels:
+        app.kubernetes.io/name: craftista
+        app.kubernetes.io/instance: ${var.environment}
+    spec:
+      # Associate with the Craftista project
+      project: craftista
 
-#       # Source Configuration - Where is the application manifest in Git?
-#       source:
-#         repoURL: https://github.com/akhileshmishrabiz/may-bootcamp.git
-#         path: class28-29/microservices-on-k8s/k8s-menifest-adv
-#         targetRevision: HEAD  # Track main/master branch
+      # Source Configuration - Where is the application manifest in Git?
+      source:
+        repoURL: https://github.com/akhileshmishrabiz/may-bootcamp.git
+        path: class28-29/microservices-on-k8s/k8s-menifest-adv
+        targetRevision: HEAD  # Track main/master branch
 
-#       # Destination - Where should ArgoCD deploy the application?
-#       destination:
-#         server: https://kubernetes.default.svc
-#         namespace: ${var.namespace}
+      # Destination - Where should ArgoCD deploy the application?
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: ${var.namespace}
 
-#       # Sync Policy - How should ArgoCD keep cluster in sync with Git?
-#       syncPolicy:
-#         # Automated sync - ArgoCD automatically applies Git changes
-#         automated:
-#           prune: true      # Delete resources removed from Git
-#           selfHeal: true   # Revert manual changes to match Git
+      # Sync Policy - How should ArgoCD keep cluster in sync with Git?
+      syncPolicy:
+        # Automated sync - ArgoCD automatically applies Git changes
+        automated:
+          prune: true      # Delete resources removed from Git
+          selfHeal: true   # Revert manual changes to match Git
 
-#         # Additional sync options
-#         syncOptions:
-#           - CreateNamespace=true
-#           - PrunePropagationPolicy=foreground
-#           - PruneLast=true
+        # Additional sync options
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
 
-#         # Retry configuration for failed syncs
-#         retry:
-#           limit: 5
-#           backoff:
-#             duration: 5s
-#             factor: 2
-#             maxDuration: 3m
+        # Retry configuration for failed syncs
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
 
-#       # Ignore Differences - Prevent drift detection for controller-managed fields
-#       ignoreDifferences:
-#         - group: apps
-#           kind: Deployment
-#           managedFieldsManagers:
-#             - kube-controller-manager
+      # Ignore Differences - Prevent drift detection for controller-managed fields
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          managedFieldsManagers:
+            - kube-controller-manager
 
-#       # Keep last 10 revisions for rollback
-#       revisionHistoryLimit: 10
-#   YAML
+      # Keep last 10 revisions for rollback
+      revisionHistoryLimit: 10
+  YAML
 
-#   depends_on = [
-#     kubectl_manifest.craftista_project
-#   ]
-# }
+  depends_on = [
+    kubectl_manifest.craftista_project
+  ]
+}
 
 # ============================================================================
 # Outputs
