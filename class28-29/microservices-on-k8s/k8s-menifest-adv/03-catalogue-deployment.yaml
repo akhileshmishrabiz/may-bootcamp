@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: catalogue
-        image: livingdevopswithakhilesh/microservices:catalogue-644625f8de627843afd6fc916bc30459705c2726
+        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-catalogue:v20251005-8c09f6ca
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
