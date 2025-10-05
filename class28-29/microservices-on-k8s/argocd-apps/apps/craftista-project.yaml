@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: craftista
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Craftista Microservices Project
+
+  # Source repositories
+  sourceRepos:
+    - https://github.com/akhileshmishrabiz/may-bootcamp.git
+    - '*'  # Allow all repos for flexibility
+
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: craftista
+      server: https://kubernetes.default.svc
+    - namespace: 'craftista-*'
+      server: https://kubernetes.default.svc
+
+  # Cluster resource allow list
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRole
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRoleBinding
+    - group: 'apiextensions.k8s.io'
+      kind: CustomResourceDefinition
+
+  # Namespace resource allow list (empty = allow all)
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Deny resources (for safety)
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange
+
+  # RBAC policies
+  roles:
+    # Admin role - full access
+    - name: admin
+      description: Admin privileges to craftista project
+      policies:
+        - p, proj:craftista:admin, applications, *, craftista/*, allow
+        - p, proj:craftista:admin, repositories, *, *, allow
+        - p, proj:craftista:admin, clusters, *, *, allow
+      groups:
+        - craftista-admins
+
+    # Developer role - limited access
+    - name: developer
+      description: Developer access to craftista applications
+      policies:
+        - p, proj:craftista:developer, applications, get, craftista/*, allow
+        - p, proj:craftista:developer, applications, sync, craftista/*, allow
+        - p, proj:craftista:developer, applications, override, craftista/*, allow
+        - p, proj:craftista:developer, repositories, get, *, allow
+      groups:
+        - craftista-developers
+
+    # Read-only role
+    - name: readonly
+      description: Read-only access to craftista applications
+      policies:
+        - p, proj:craftista:readonly, applications, get, craftista/*, allow
+        - p, proj:craftista:readonly, repositories, get, *, allow
+      groups:
+        - craftista-viewers
+
+  # Orphaned resources - keep by default
+  orphanedResources:
+    warn: true

@@ -56,22 +56,7 @@ resource "aws_acm_certificate_validation" "craftista" {
   validation_record_fqdns = [for record in aws_route53_record.craftista_cert_validation : record.fqdn]
 }
 
-# ACM Certificate for ArgoCD
-resource "aws_acm_certificate" "argocd" {
-  domain_name       = "argocd.${var.subdomain}.${var.domain_name}"
-  validation_method = "DNS"
 
-  tags = {
-    Name        = "argocd-certificate"
-    Environment = var.environment
-    Application = "argocd"
-    ManagedBy   = "Terraform"
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
 
 # Route53 DNS validation records for ArgoCD ACM certificate
 resource "aws_route53_record" "argocd_cert_validation" {
@@ -91,11 +76,6 @@ resource "aws_route53_record" "argocd_cert_validation" {
   zone_id         = data.aws_route53_zone.main.zone_id
 }
 
-# Certificate validation for ArgoCD
-resource "aws_acm_certificate_validation" "argocd" {
-  certificate_arn         = aws_acm_certificate.argocd.arn
-  validation_record_fqdns = [for record in aws_route53_record.argocd_cert_validation : record.fqdn]
-}
 
 # Ingress managed by Terraform for easy ALB lookup and Route53 mapping
 resource "kubernetes_ingress_v1" "craftista_ingress" {

@@ -1,0 +1,40 @@
+# This file contains instructions for installing ArgoCD
+# Run the following commands:
+
+# 1. Apply ArgoCD installation
+# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# 2. Wait for ArgoCD to be ready
+# kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
+
+# 3. Get initial admin password
+# kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# 4. Port forward to access ArgoCD UI (optional)
+# kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+# 5. Access ArgoCD at https://localhost:8080
+# Username: admin
+# Password: (from step 3)
+
+---
+# ArgoCD Server Service - Expose via ALB
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-alb
+  namespace: argocd
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
