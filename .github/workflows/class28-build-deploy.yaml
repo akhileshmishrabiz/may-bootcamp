@@ -1,0 +1,69 @@
+name: Build and Push Microservices to ECR
+
+on:
+  # push:
+  #   branches: [ main ]
+  #   paths:
+  #     - 'class28-29/microservices-on-k8s/app/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 879381241087.dkr.ecr.ap-south-1.amazonaws.com
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: frontend
+            ecr_repo: devopsbootcamp-dev-frontend
+          - name: catalogue
+            ecr_repo: devopsbootcamp-dev-catalogue
+          - name: voting
+            ecr_repo: devopsbootcamp-dev-voting
+          - name: recommendation
+            ecr_repo: devopsbootcamp-dev-recommendations
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Generate image tag
+      id: image-tag
+      run: |
+        SHORT_SHA=${GITHUB_SHA::8}
+        IMAGE_TAG="v$(date +%Y%m%d)-${SHORT_SHA}"
+        echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "Generated image tag: ${IMAGE_TAG}"
+
+    - name: Build and push ${{ matrix.service.name }}
+      uses: docker/build-push-action@v5
+      with:
+        context: ./class28-29/microservices-on-k8s/app/${{ matrix.service.name }}
+        file: ./class28-29/microservices-on-k8s/app/${{ matrix.service.name }}/Dockerfile
+        push: true
+        tags: |
+          ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ steps.image-tag.outputs.image_tag }}
+          ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Summary
+      run: |
+        echo " Built and pushed ${{ matrix.service.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "Image: ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ steps.image-tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
