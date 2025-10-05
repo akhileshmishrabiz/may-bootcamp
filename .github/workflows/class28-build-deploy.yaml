@@ -1,4 +1,4 @@
-name: Build and Push Microservices to ECR
+name: class28 build deploy argo
 
 on:
   # push:
