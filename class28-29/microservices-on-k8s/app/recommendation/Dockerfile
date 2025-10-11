@@ -4,7 +4,13 @@ FROM golang:1.20.10-alpine3.18
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the Go application code into the container
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the rest of the application code
 COPY . .
 
 # Build the Go application
