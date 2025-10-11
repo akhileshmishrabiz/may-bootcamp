@@ -2,14 +2,82 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-        "recommendation/api"
+	"recommendation/api"
 	"net/http"
 	"time"
-        "encoding/json"
+	"encoding/json"
 	"net"
-        "os"
+	"os"
+
+	// Prometheus imports
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// ============================================================================
+// Prometheus Metrics
+// ============================================================================
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "recommendation_http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "endpoint", "status"},
+	)
+
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "recommendation_http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	recommendationsServed = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "recommendation_origami_of_day_total",
+			Help: "Total number of origami-of-the-day recommendations served",
+		},
+	)
+)
+
+// ============================================================================
+// Prometheus Middleware
+// ============================================================================
+func prometheusMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
+		// Process request
+		c.Next()
+
+		// Record metrics
+		duration := time.Since(start).Seconds()
+		status := c.Writer.Status()
+
+		httpRequestsTotal.WithLabelValues(
+			c.Request.Method,
+			path,
+			http.StatusText(status),
+		).Inc()
+
+		httpRequestDuration.WithLabelValues(
+			c.Request.Method,
+			path,
+		).Observe(duration)
+	}
+}
+
+// ============================================================================
+// Configuration
+// ============================================================================
 
 // Config represents the structure of our configuration file.
 type Config struct {
@@ -30,6 +98,9 @@ func loadConfig() (Config, error) {
     return config, err
 }
 
+// ============================================================================
+// System Info
+// ============================================================================
 
 type SystemInfo struct {
 	Hostname      string
@@ -64,23 +135,16 @@ func GetSystemInfo() SystemInfo {
 	}
 }
 
+// ============================================================================
+// Handlers
+// ============================================================================
+
 func getRecommendationStatus(c *gin.Context) {
-	// Here you would typically check some aspects of your service to determine its status.
-	// If everything's ok, return operational. Otherwise, return a different status.
-	// This is a simple example without real checks, adjust according to your needs.
-
-	// Example checks might include:
-	// - Database connectivity
-	// - External API/service availability
-	// - Disk space, memory usage, etc.
-
-	status := "operational"  // or "down", "maintenance", etc.
-
+	status := "operational"
 	c.JSON(http.StatusOK, gin.H{
 		"status": status,
 	})
 }
-
 
 func renderHomePage(c *gin.Context) {
 	config, err := loadConfig()
@@ -88,7 +152,7 @@ func renderHomePage(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-    
+
 	systemInfo := GetSystemInfo()
 
 	c.HTML(http.StatusOK, "index.html", gin.H{
@@ -98,29 +162,43 @@ func renderHomePage(c *gin.Context) {
 	})
 }
 
+// Wrapped origami handler to count recommendations
+func getOrigamiOfTheDayWithMetrics(c *gin.Context) {
+	recommendationsServed.Inc()
+	api.GetOrigamiOfTheDay(c)
+}
+
+// ============================================================================
+// Main Function
+// ============================================================================
 
 func main() {
 	router := gin.Default()
-		
+
+	// Add Prometheus middleware
+	router.Use(prometheusMiddleware())
+
 	// Load HTML files
 	router.LoadHTMLGlob("templates/*")
 
 	// Set path to serve static files
 	router.Static("/static", "./static")
 
-	// Define route for the home page
+	// ========================================================================
+	// Metrics and Health Endpoints
+	// ========================================================================
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+
+	// ========================================================================
+	// Application Routes
+	// ========================================================================
 	router.GET("/", renderHomePage)
-
-	// Handle requests to the /origami-of-the-day endpoint with the GetOrigamiOfTheDay function from the api package
-	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay)
-        
-	// Service Status Page
-        router.GET("/api/recommendation-status", getRecommendationStatus)
-
+	router.GET("/api/origami-of-the-day", getOrigamiOfTheDayWithMetrics)
+	router.GET("/api/recommendation-status", getRecommendationStatus)
 
 	// Start the server on port 8080
 	router.Run(":8080")
-
 }
-
-

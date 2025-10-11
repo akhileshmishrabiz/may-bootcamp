@@ -13,7 +13,12 @@ module "eks" {
     vpc-cni                = {
       before_compute = true
     }
-    # "aws-ebs-csi-driver"  = {}
+    aws-ebs-csi-driver = {
+      service_account_role_arn    = aws_iam_role.ebs_csi_driver.arn
+      addon_version               = "v1.37.0-eksbuild.1"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "PRESERVE"
+    }
   }
 
   # Optional

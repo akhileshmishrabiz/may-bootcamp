@@ -2,7 +2,10 @@ module recommendation
 
 go 1.20
 
-require github.com/gin-gonic/gin v1.9.1
+require (
+	github.com/gin-gonic/gin v1.9.1
+	github.com/prometheus/client_golang v1.17.0
+)
 
 require (
 	github.com/bytedance/sonic v1.10.2 // indirect
