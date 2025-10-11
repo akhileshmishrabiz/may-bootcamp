@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: voting
-        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-voting:v20251005-8c09f6ca
+        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-voting:v20251011-990654f6
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
