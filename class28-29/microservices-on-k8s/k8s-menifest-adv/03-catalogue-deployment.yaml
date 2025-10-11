@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: catalogue
-        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-catalogue:v20251011-2c1ea9d0
+        image: 879381241087.dkr.ecr.ap-south-1.amazonaws.com/devopsbootcamp-dev-catalogue:v20251011-f7cc7797
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
