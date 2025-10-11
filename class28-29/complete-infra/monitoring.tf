@@ -131,24 +131,24 @@ resource "helm_release" "kube_prometheus_stack" {
         }
 
         # Pre-configured dashboards
-        dashboardProviders = {
-          "dashboardproviders.yaml" = {
-            apiVersion = 1
-            providers = [
-              {
-                name            = "default"
-                orgId           = 1
-                folder          = ""
-                type            = "file"
-                disableDeletion = false
-                editable        = true
-                options = {
-                  path = "/var/lib/grafana/dashboards/default"
-                }
-              }
-            ]
-          }
-        }
+        # dashboardProviders = {
+        #   "dashboardproviders.yaml" = {
+        #     apiVersion = 1
+        #     providers = [
+        #       {
+        #         name            = "default"
+        #         orgId           = 1
+        #         folder          = ""
+        #         type            = "file"
+        #         disableDeletion = false
+        #         editable        = true
+        #         options = {
+        #           path = "/var/lib/grafana/dashboards/default"
+        #         }
+        #       }
+        #     ]
+        #   }
+        # }
 
         # Import common dashboards
         dashboards = {
