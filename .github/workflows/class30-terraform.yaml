@@ -31,5 +31,15 @@ jobs:
           directory: ${{ env.infra_path }}
           framework: terraform
           quiet: false
-          output: cli
-          skip_check: CKV2_AWS_11, CKV2_AWS_41, CKV_AWS_24
+          skip_check: CKV2_AWS_11,CKV2_AWS_41,CKV_AWS_24
+
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3   
+
+      - name: Lint YAML files
+        uses: ibiqlik/action-yamllint@v3
+  
