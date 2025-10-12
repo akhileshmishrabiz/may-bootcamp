@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and update with your values
+# cp terraform.tfvars.example terraform.tfvars
+
+# Required Variables
+key_name = "your-key-pair-name"  # Replace with your AWS key pair name
+
+# Optional Variables (defaults shown)
+aws_region         = "us-east-1"
+project_name       = "flask-app"
+environment        = "dev"
+instance_type      = "t2.micro"
+vpc_cidr          = "10.0.0.0/16"
+public_subnet_cidr = "10.0.1.0/24"
+root_volume_size   = 20
+
+# Security - Restrict to your IP for better security
+allowed_ssh_cidr = ["0.0.0.0/0"]  # Replace with ["YOUR_IP/32"] for production

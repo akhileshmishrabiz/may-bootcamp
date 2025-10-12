@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Calculator & Tools</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .tool-card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .calculator-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .calc-btn {
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flask Calculator & Tools</h1>
+
+        <div class="tools-grid">
+            <!-- Calculator -->
+            <div class="tool-card">
+                <h2>Calculator</h2>
+                <div class="input-group">
+                    <label for="calc-num1">First Number</label>
+                    <input type="number" id="calc-num1" step="any" placeholder="Enter first number">
+                </div>
+                <div class="input-group">
+                    <label for="calc-num2">Second Number</label>
+                    <input type="number" id="calc-num2" step="any" placeholder="Enter second number">
+                </div>
+                <div class="calculator-buttons">
+                    <button class="calc-btn" onclick="calculate('add')">Add (+)</button>
+                    <button class="calc-btn" onclick="calculate('subtract')">Subtract (-)</button>
+                    <button class="calc-btn" onclick="calculate('multiply')">Multiply (×)</button>
+                    <button class="calc-btn" onclick="calculate('divide')">Divide (÷)</button>
+                    <button class="calc-btn" onclick="calculate('power')">Power (^)</button>
+                    <button class="calc-btn" onclick="calculate('modulo')">Modulo (%)</button>
+                </div>
+                <div id="calc-result" class="result"></div>
+            </div>
+
+            <!-- Temperature Converter -->
+            <div class="tool-card">
+                <h2>Temperature Converter</h2>
+                <div class="input-group">
+                    <label for="temp-value">Temperature</label>
+                    <input type="number" id="temp-value" step="any" placeholder="Enter temperature">
+                </div>
+                <div class="input-group">
+                    <label for="temp-unit">From Unit</label>
+                    <select id="temp-unit">
+                        <option value="celsius">Celsius</option>
+                        <option value="fahrenheit">Fahrenheit</option>
+                    </select>
+                </div>
+                <button onclick="convertTemperature()">Convert</button>
+                <div id="temp-result" class="result"></div>
+            </div>
+
+            <!-- String Reverser -->
+            <div class="tool-card">
+                <h2>String Reverser</h2>
+                <div class="input-group">
+                    <label for="string-text">Enter Text</label>
+                    <textarea id="string-text" placeholder="Enter text to reverse"></textarea>
+                </div>
+                <button onclick="reverseString()">Reverse</button>
+                <div id="string-result" class="result"></div>
+            </div>
+
+            <!-- Random Number Generator -->
+            <div class="tool-card">
+                <h2>Random Number Generator</h2>
+                <div class="input-group">
+                    <label for="random-min">Minimum Value</label>
+                    <input type="number" id="random-min" value="1" placeholder="Minimum">
+                </div>
+                <div class="input-group">
+                    <label for="random-max">Maximum Value</label>
+                    <input type="number" id="random-max" value="100" placeholder="Maximum">
+                </div>
+                <button onclick="generateRandom()">Generate</button>
+                <div id="random-result" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'result ' + (isError ? 'error' : 'success');
+        }
+
+        async function calculate(operation) {
+            const num1 = parseFloat(document.getElementById('calc-num1').value);
+            const num2 = parseFloat(document.getElementById('calc-num2').value);
+
+            if (isNaN(num1) || isNaN(num2)) {
+                showResult('calc-result', 'Please enter valid numbers', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ num1, num2, operation })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('calc-result', `Result: ${data.result}`);
+                } else {
+                    showResult('calc-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('calc-result', 'Error: ' + error.message, true);
+            }
+        }
+
+        async function convertTemperature() {
+            const value = parseFloat(document.getElementById('temp-value').value);
+            const from = document.getElementById('temp-unit').value;
+
+            if (isNaN(value)) {
+                showResult('temp-result', 'Please enter a valid temperature', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/convert-temperature', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ value, from })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('temp-result', `${data.from_value}° ${data.from_unit} = ${data.result}° ${data.to_unit}`);
+                } else {
+                    showResult('temp-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('temp-result', 'Error: ' + error.message, true);
+            }
+        }
+
+        async function reverseString() {
+            const text = document.getElementById('string-text').value;
+
+            if (!text) {
+                showResult('string-result', 'Please enter some text', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/reverse-string', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('string-result', `Reversed: ${data.reversed}`);
+                } else {
+                    showResult('string-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('string-result', 'Error: ' + error.message, true);
+            }
+        }
+
+        async function generateRandom() {
+            const min = parseInt(document.getElementById('random-min').value);
+            const max = parseInt(document.getElementById('random-max').value);
+
+            if (isNaN(min) || isNaN(max)) {
+                showResult('random-result', 'Please enter valid numbers', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/random-number', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ min, max })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('random-result', `Random Number: ${data.result} (between ${data.min} and ${data.max})`);
+                } else {
+                    showResult('random-result', data.error, true);
+                }
+            } catch (error) {
+                showResult('random-result', 'Error: ' + error.message, true);
+            }
+        }
+    </script>
+</body>
+</html>
