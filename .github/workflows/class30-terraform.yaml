@@ -43,7 +43,7 @@ jobs:
       - name: Lint YAML files
         uses: ibiqlik/action-yamllint@v3
         with:
-          config_file: .github/workflows/.yamllint.yml
+          config_file: .github/action/.yamllint
           files: .github/workflows/**
-          
+        
   

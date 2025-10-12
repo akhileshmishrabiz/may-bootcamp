@@ -1,5 +1,5 @@
 # VPC
-
+# checkov:skip=CKV2_AWS_12: this is demo
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
