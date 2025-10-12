@@ -1,5 +1,3 @@
-
-
 def calculate_something(x, y, z):
     result = x + y + z
     unused_var = "this is not used"
