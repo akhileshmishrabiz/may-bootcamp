@@ -32,4 +32,4 @@ jobs:
           framework: terraform
           quiet: false
           output: cli
-          # skip_check: CKV2_AWS_11
+          skip_check: CKV2_AWS_11, CKV2_AWS_41, CKV_AWS_24

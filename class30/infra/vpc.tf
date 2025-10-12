@@ -1,4 +1,5 @@
 # VPC
+
 # checkov:skip=CKV2_AWS_12:Skipping this rule as per project requirements
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
