@@ -24,12 +24,12 @@ output "ec2_private_ip" {
 }
 
 output "security_group_id" {
-  description    = "ID of the security group"
+  description = "ID of the security group"
   value       = aws_security_group.ec2.id
 }
 
 output "ssh_command" {
-  description   = "SSH command to connect to the instance"
+  description = "SSH command to connect to the instance"
   value       = "ssh -i ~/.ssh/${var.key_name}.pem ec2-user@${aws_eip.main.public_ip}"
 }
 
