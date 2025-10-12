@@ -31,4 +31,5 @@ jobs:
           directory: ${{ env.infra_path }}
           framework: terraform
           quiet: false
-          # skip_check: CKV_AWS_21,CKV_AWS_57,CKV_AWS_58,CKV_AWS_59,CKV_AWS_60,
+          output: cli
+          # skip_check: CKV2_AWS_11
